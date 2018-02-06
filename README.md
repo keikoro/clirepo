@@ -7,7 +7,7 @@ If you use Git a lot, and only from the command line, having to switch to a brow
 I've been using `curl` to create new remote repositories from the terminal for quite a while now. To have a more portable solution – and to not have my access tokens show up in my console history anymore – I wrote this script.
 
 ## Usage example
-To create a new repository called `neato_proj` on GitHub, you could use the following command:
+To create a new, private repository called `neato_proj` on GitHub, you would use the following command:
 
 ```
 $ ./clirepo.sh neato_proj github
@@ -45,7 +45,7 @@ $ chmod 600 .servicename
 
 ## More usage examples
 
-If you cloned the repository as described above and did not move the actual script, it will sit inside `.clirepo` in your home directory. To call it from there to create a `myJSFramework` repository on bitbucket.org, you could use:
+If you cloned the repository as described above and did not move the actual script, it will sit inside `.clirepo` in your home directory. To call it from there to create a private `myJSFramework` repository on bitbucket.org, you could use:
 
 ```
 $ ~/.clirepo/clirepo.sh myJSFramework bitbucket
@@ -55,6 +55,12 @@ though you could also shorten the service's names to two letters (use `gh` for g
 
 ```
 $ ~/.clirepo/clirepo.sh myJSFramework bb
+```
+
+All repositories created with this script are **set to private by default**. You can, however, use `public` as third argument to make them public from the start:
+
+```
+$ ~/.clirepo/clirepo.sh myJSFramework bb public
 ```
 
 ---
