@@ -13,6 +13,16 @@ To create a new, private repository called `neato_proj` on GitHub, you would use
 $ ./clirepo.sh neato_proj github
 ```
 
+The service's response will be printed to stdout, followed by handy URLs to your repository for easy adding of a new remote or viewing it online:
+
+```
+You can now git remote add ...
+git@github.com:YOUR_USERNAME/neato_proj.git
+https://github.com/YOUR_USERNAME/neato_proj.git
+
+Web URL: https://github.com/YOUR_USERNAME/neato_proj
+```
+
 ## Requirements
 You need to have Bash installed on your machine for this script to work (it does not have to be your main shell; it isn't mine either).
 
@@ -63,11 +73,18 @@ All repositories created with this script are **set to private by default**. You
 $ ~/.clirepo/clirepo.sh myJSFramework bb public
 ```
 
----
 You can also always use `-h` or `--help` for more information on how to use the script:
 ```
 $ ./clirepo.sh -h
 ```
+
+---
+
+As shown earlier, the script prints out several useful URLs in addition to the service's JSON response on successful repository creation:
+* the repo's **SSH URL** (starts with  `git@`) and **HTTPS URL** (starts with `https://`), so you can quickly add the new remote to your local git repository, irrespective of which protocol you use to clone/fetch/pull/push
+* followed by its **web URL**, which might be clickable depending on the terminal software you use (press CTRL/CMD while clicking on the URL to check)
+
+The script will also tell you if the repository could not be created, e.g. because it already exists.
 
 ## Contributing
 If you have ideas for how this script could be improved, gimme a shout. Depending on the motivation for and dimensions of any proposed changes, I might consider merging them into my script – or ask you to just fork it and adapt it to your own needs.
