@@ -1,7 +1,7 @@
 # ----- Files PROJECT
-.bitbucket
-.github
-.gitlab
+*.bitbucket
+*.github
+*.gitlab
 
 # ----- Mac
 .DS_Store
