@@ -1,241 +1,262 @@
 #!/usr/bin/env bash
 #
-# Create a new remote repository on GitHub, GitLab or Bitbucket.
+# Create a new remote repository on GitHub, GitLab or Bitbucket
+# from your command line.
+#
 # Copyright (c) 2018 K Kollmann <code∆k.kollmann·moe>
-
 
 # you can change the directory you want to use to store your credentials
 # in by changing the value of credentials_dir
-credentials_dir="$HOME/.clirepo"
+credentials_dir="$HOME/.clirepo/credentials"
 
-if [ "$credentials_dir" == "$HOME/.clirepo" ]; then
-  credentials_dir_display="~/.clirepo"
-else
-  credentials_dir_display="$credentials_dir"
-fi
 
-helptext="You
-need to provide the name of the remote repository you want to
-\ncreate as well as the service you want to create it on (either
-\nits full name in lower case letters or its name shortened to two
-\nletters - bb for bitbucket, gh for github, gl for gitlab). The
-\nvisibility of all new repositories is set to private, though you
-\ncan override this behaviour by using 'public' as optional third
-\nargument.
-\nThis script supports the creation of remote repositories hosted on
-\nGitHub, GitLab and Bitbucket. You have to have a file with your
-\ncredentials for the service you want to use in $credentials_dir_display.
-Use -t
-\nas first argument to see templates for any (or all) of these files,
-\ne.g. ./clirepo.sh -t [github]. Make sure to set the file permissions
-\nso only your user can access the file(s), e.g. chmod 600 FILENAME.
-\nUsage: ./clirepo.sh <reponame> <service> [public]"
+#
+#
+#
+declare -A services=(["bb"]="bb" ["bitbucket"]="bb" ["gh"]="gh" ["github"]="gh" ["gl"]="gl" ["gitlab"]="gl")
 
-bitbucket='Contents of file .bitbucket:
-\nmachine api.bitbucket.org login YOUR_USERNAME password YOUR_TOKEN'
+declare -A bb=(["label"]="bitbucket" ["full_name"]="Bitbucket" ["web"]="bitbucket.org" ["func"]="create_repo_bitbucket")
+declare -A gh=(["label"]="github" ["full_name"]="GitHub" ["web"]="github.com" ["func"]="create_repo_github")
+declare -A gl=(["label"]="gitlab" ["full_name"]="GitLab" ["web"]="gitlab.com" ["func"]="create_repo_gitlab")
 
-github='Contents of file .github:
-\nmachine api.github.com login YOUR_USERNAME password YOUR_TOKEN'
+usage=".....
+CLIREPO
+This script supports the command line-based creation
+of remote repositories hosted on GitHub, GitLab and Bitbucket.
 
-gitlab='Contents of file .gitlab:
-\n--header "Private-Token: YOUR_PRIVATE_TOKEN"'
+Usage:
+  ./clirepo.sh <reponame> <service> [public]
 
+Use -h or --help for more information:
+  ./clirepo.sh -h"
+
+helptext="CLIREPO help
+
+USAGE
+-----
+  ./clirepo.sh <reponame> <service> [public]
+
+SETUP
+-----
+For each service you want to use, you have to have a file
+with your credentials saved in the credentials directory
+($credentials_dir/).
+
+Use -t as first argument to see templates for any (or all)
+available credential files, e.g.
+  ./clirepo.sh -t [github]
+
+Once you have added your credentials, make sure to set the file permissions
+so only your user can access the file(s), e.g.
+  chmod 600 file_name
+
+SHORTCUTS
+---------
+You can use the following shortcuts in place of the full service names:
+  bb for Bitbucket
+  gh for GitHub
+  gl for GitLab
+e.g.
+   ./clirepo.sh MyNewRepo gl
+"
 if [ "$1" == "-t" ]; then
+  platform=$2
   # template text can be displayed per service
-  if [ "$2" == "bitbucket" ] \
-    || [ "$2" == "github" ] \
-    || [ "$2" == "gitlab" ]; then
-    echo -e ${!2}
+  if [[ -n "$platform" ]] && [[ -n "${services[$platform]}" ]]; then
+      id=${services[$platform]}
+      l=$id[label]
+      label=${!l}
+      n=$id[full_name]
+      full_name=${!n}
+      printf "%s\n" "Template for .$label credentials file:" "$(<$credentials_dir/.$label.template)"
   else
-    echo -e $bitbucket
-    echo -e $github
-    echo -e $gitlab
+    if [[ -n "$platform" ]]; then
+      printf "%s\n" "Service $platform does not exist." ""
+    fi
+    printf "%s\n" "Templates for credential files for available services:"
+    for fn in $credentials_dir/.[^.]*.template; do
+      printf "%s\n" " $(basename $fn)" "$(<$fn)"
+    done
   fi
   exit
-elif [ "$1" == "-h" ] || [ "$1" == "--help" ] \
-  || [ "$1" == "" ] || [ "$2" == "" ]; then
-  echo -e $helptext
+elif [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+  printf "%s\n" "$helptext"
+  exit
+elif [ "$1" == "" ] || [ "$2" == "" ]; then
+  printf "%s\n" "$usage"
   exit
 else
-  reponame=$1
-  service=$2
+  repo_name=$1
+  platform=$2
   privacylevel=$3
 
-  # allow shortened versions of service names as args but switch to
-  # full names for easier referencing of credentials files
-  case "$service" in
-    "bb" )
-      service=bitbucket ;;
-    "gh" )
-      service=github ;;
-    "gl" )
-      service=gitlab ;;
-    # set file name to empty if an unknown service was provided
-    * )
-      filename="" ;;
-  esac
+  if [[ -n "${services[$platform]}" ]]; then
+    id=${services[$platform]}
 
-  if [ ! $filename ]; then
-    filename=."$service"
-    filepath="$credentials_dir/$filename"
+    l=$id[label]
+    label=${!l}
+    n=$id[full_name]
+    full_name=${!n}
+    w=$id[web]
+    web=${!w}
+    f=$id[func]
+    func=${!f}
+
+    file_name=."$label"
+    file_path="$credentials_dir/$file_name"
+    repo_lowercase="$(echo "$repo_name" | tr '[:upper:]' '[:lower:]')"
   else
-    echo The provided service "$service" is unknown.
-    echo Could not create repository "$reponame".
+    printf "%s\n" "The provided service $platform is unknown."
+    printf "%s\n" "Could not create repository $repo_name."
     exit
   fi
 fi
 
-function create_bitbucket_repo {
-  website=bitbucket.org
-
+function create_repo_bitbucket {
   # user name is needed for constructing Bitbucket URLs
-  read -r m s l user p t < <(cat "$filepath")
+  read -r m s l user p t < <(cat "$file_path")
   # Bitbucket needs repo name in lower case characters for repo slug
-  repo_lowercase="$(echo "$reponame" | tr '[:upper:]' '[:lower:]')"
-  url="https://api.$website/2.0/repositories/$user/$repo_lowercase"
+  api_url="https://api.$web/2.0/repositories/$user/$repo_lowercase"
 
   is_private=true
   if [ "$privacylevel" == "public" ]; then
     is_private=false
   fi
-  options='{"name": "'"$reponame"'", "scm": "git", "is_private": '"$is_private"'}'
+  options='{"name": "'"$repo_name"'", "scm": "git", "is_private": '"$is_private"'}'
 
   # issue curl command and save its stdout output into a variable
   response=$(curl --silent -H "Content-Type: application/json" \
   -d "$options" \
-  --netrc-file <(cat "$filepath") "$url")
-  echo "${response[@]}"
+  --netrc-file <(cat "$file_path") "$api_url")
 
-  # filter out ssh_url and https_url from JSON response
+  # filter out git@ and https urls from JSON response
   clone_info=$(echo "$response" | grep -Eo '"clone": \[.*?\]')
-  ssh_url=$(echo "$clone_info" | grep -Eo 'git@[^"]*')
-  https_url=$(echo "$clone_info" | grep -Eo 'https:[^"]*')
+  git_ssh=$(echo "$clone_info" | grep -Eo 'git@[^"]*')
+  git_https=$(echo "$clone_info" | grep -Eo 'https:[^"]*')
 
   # construct (clickable) URL to repo on web
   # Bitbucket allows: alphanumerical, underscores, dashes, dots
-  repo_lowercase=$(echo "$repo_lowercase" | sed 's:[^0-9a-z\-\_\.]:-:g')
-  web_url="https://$website/$user/$repo_lowercase"
+  repo_slug=$(echo "$repo_lowercase" | sed 's:[^0-9a-z\-\_\.]:-:g')
+  web_url="https://$web/$user/$repo_slug"
 
   # check if repo creation failed because it already exists
-  if [ -z "$ssh_url" ] && [ -z "$https_url" ]; then
+  if [ -z "$git_ssh" ] && [ -z "$git_https" ]; then
     repo_exists=$(echo "$response" \
     | grep -Eo 'Repository with this Slug and Owner already exists.')
   fi
 }
 
-function create_github_repo {
-  website=github.com
-  url="https://api.$website/user/repos"
-  repo_lowercase="$(echo "$reponame" | tr '[:upper:]' '[:lower:]')"
+function create_repo_github {
+  api_url="https://api.$web/user/repos"
 
   private=true
   if [ "$privacylevel" == "public" ]; then
     private=false
   fi
-  options='{"name": "'"$reponame"'", "private": '"$private"'}'
+  options='{"name": "'"$repo_name"'", "private": '"$private"'}'
 
   # issue curl command and save its stdout output into a variable
   response=$(curl --silent -H "Content-Type: application/json" \
   -d "$options" \
-  --netrc-file <(cat "$filepath") "$url")
-  echo "${response[@]}"
+  --netrc-file <(cat "$file_path") "$api_url")
 
   # filter out ssh_url and https_url from JSON response
-  ssh_url=$(echo "$response" \
+  git_ssh=$(echo "$response" \
   | grep -Eo '"ssh_url":\s*"[^"]*' | grep -Eo 'git@.*')
-  https_url=$(echo "$response" \
+  git_https=$(echo "$response" \
   | grep -Eo '"clone_url":\s*"[^"]*' | grep -Eo 'https:.*')
 
   # construct (clickable) URL to repo on web
-  web_url=$(echo "$https_url" | sed 's:\(.*\)\.git:\1:')
+  web_url=$(echo "$git_https" | sed 's:\(.*\)\.git:\1:')
 
   # check if repo creation failed because it already exists
-  if [ -z "$ssh_url" ] && [ -z "$https_url" ]; then
+  if [ -z "$git_ssh" ] && [ -z "$git_https" ]; then
     repo_exists=$(echo "$response" \
     | grep -Eo 'name already exists on this account')
-    repo_lowercase=$(echo "$repo_lowercase" \
+    repo_slug=$(echo "$repo_lowercase" \
     | sed 's:[^0-9a-z\-\_\.]\{1,\}:-:g')
 
     # user name is needed for GitHub web URLs
-    read -r m s l user p t < <(cat "$filepath")
+    read -r m s l user p t < <(cat "$file_path")
 
-    web_url="https://$website/$user/$repo_lowercase"
+    web_url="https://$web/$user/$repo_slug"
+    git_ssh="$web_url.git"
+    git_https="git@$web/$user/$repo_slug.git"
   fi
 }
 
-function create_gitlab_repo {
-  website=gitlab.com
-  url="https://$website/api/v4/projects"
-  repo_lowercase="$(echo "$reponame" | tr '[:upper:]' '[:lower:]')"
+function create_repo_gitlab {
+  api_url="https://$web/api/v4/projects"
 
   visibility="private"
   if [ "$privacylevel" == "public" ]; then
     visibility="public"
   fi
-  options='{"name": "'"$reponame"'", "visibility": "'"$visibility"'"}'
+  options='{"name": "'"$repo_name"'", "visibility": "'"$visibility"'"}'
 
   # issue curl command and save its stdout output into a variable
   response=$(curl --silent -H "Content-Type: application/json" \
-  -d "$options" -K <(cat "$filepath") "$url")
-  echo "${response[@]}"
+  -d "$options" -K <(cat "$file_path") "$api_url")
 
-  # filter out ssh_url and https_url from JSON response
-  ssh_url=$(echo "$response" \
+  # filter out ssh_url_to_repo and http_url_to_repo from JSON response
+  git_ssh=$(echo "$response" \
   | grep -Eo '"ssh_url_to_repo":"[^"]*' | grep -Eo 'git@.*')
-  https_url=$(echo "$response" \
+  git_https=$(echo "$response" \
   | grep -Eo '"http_url_to_repo":"[^"]*' | grep -Eo 'https:.*')
 
   # construct (clickable) URL to repo on web
   get_user=$(curl --silent -H "Content-Type: application/json" \
-  -K <(cat "$filepath") "https://$website/api/v4/user")
+  -K <(cat "$file_path") "https://$web/api/v4/user")
   user=$(echo "$get_user" | grep -Eo '"username":"[^"]*' \
   | sed 's:\"username\"\:\"\(.*\):\1:')
 
   # construct (clickable) URL to repo on web
-  web_url=$(echo "$https_url" | sed 's:\(.*\)\.git:\1:')
+  web_url=$(echo "$git_https" | sed 's:\(.*\)\.git:\1:')
 
   # check if repo creation failed because it already exists
-  if [ -z "$ssh_url" ] && [ -z "$https_url" ]; then
+  if [ -z "$git_ssh" ] && [ -z "$git_https" ]; then
     repo_exists=$(echo "$response" | grep -Eo 'has already been taken')
     # GitLab allows: letters, digits, emojis, '_', '.', dash, space
     # repositories must start with letter, digit, emoji or '_'
-    repo_lowercase=$(echo "$repo_lowercase" \
+    repo_slug=$(echo "$repo_lowercase" \
     | sed 's:[^0-9a-z\-\_]\{1,\}:-:g')
 
-    web_url="https://$website/$user/$repo_lowercase"
+    web_url="https://$web/$user/$repo_slug"
+    git_ssh="$web_url.git"    
+    git_https="git@$web/$user/$repo_slug.git" 
   fi
 }
 
 # check for credentials file
-if [ ! -f "$filepath" ]; then
-  echo File "$filename" with user credentials missing!
+if [ ! -f "$file_path" ]; then
+  printf "%s\n" "file $file_name for $full_name user credentials does not exist"
+  printf "%s\n" "(missing file $file_path)"
   exit
 else
   # note: if a 3rd arg was used, its value is saved in
   # global var $privacylevel (and referenced as such in each function)
-  if [ "$service" == "bitbucket" ]; then
-    create_bitbucket_repo "$filename"
-  elif [ "$service" == "github" ]; then
-    create_github_repo "$filename"
-  elif [ "$service" == "gitlab" ]; then
-    create_gitlab_repo "$filename"
-  fi
-
+  # echo "$func"
+  $func "$file_name"
   # note: the two git clone url variables are global vars
   # (hence work here too, outside of the function they were created in)
-  echo ""
+  printf "%s\n" ""
 
-  if [ ! -z "$ssh_url" ] && [ ! -z "$https_url" ]; then
-    echo "You can now git remote add ..."
-    echo "$ssh_url"
-    echo "$https_url"
-    echo ""
-  elif [ ! -z "$repo_exists" ]; then
-    echo "Repository '$reponame' already exists!"
+  if [ -n "$repo_exists" ]; then
+    printf "%s\n" "Repository '$repo_name' already exists on $full_name:"
+    printf "%s\n" "$web_url" ""
+    printf "%s\n" "For your convenience:"
+    printf "%s\n" "git remote add $git_https"
+    printf "%s\n" "git remote add $git_ssh"
+    printf "%s\n" ""
+  elif [ -n "$git_ssh" ] && [ -n "$git_https" ]; then
+    printf "%s\n" "Repository '$repo_name' successfully created on $full_name!" ""
+    printf "%s\n" "For your convenience:"
+    printf "%s\n" "git remote add $git_https"
+    printf "%s\n" "git remote add $git_ssh" ""
+    printf "%s\n" "Visit in on the web:" "$web_url"
   else
-    echo "Something went wrong while trying to create '$reponame'..."
-    echo "Please check the above response message for more info."
+    printf "%s\n" "Something went wrong while trying to create '$repo_name'..."
+    printf "%s\n" "$response"
     exit
   fi
-  echo "Web URL: $web_url"
 fi
