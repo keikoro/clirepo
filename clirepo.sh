@@ -180,8 +180,8 @@ function create_repo_github {
     read -r m s l user p t < <(cat "$file_path")
 
     web_url="https://$web/$user/$repo_slug"
-    git_ssh="$web_url.git"
-    git_https="git@$web/$user/$repo_slug.git"
+    git_https="$web_url.git"
+    git_ssh="git@$web:$user/$repo_slug.git"
   fi
 }
 
@@ -222,8 +222,8 @@ function create_repo_gitlab {
     | sed 's:[^0-9a-z\-\_]\{1,\}:-:g')
 
     web_url="https://$web/$user/$repo_slug"
-    git_ssh="$web_url.git"    
-    git_https="git@$web/$user/$repo_slug.git" 
+    git_https="$web_url.git"
+    git_ssh="git@$web:$user/$repo_slug.git"
   fi
 }
 
