@@ -229,7 +229,7 @@ function create_repo_gitlab {
 
 # check for credentials file
 if [ ! -f "$file_path" ]; then
-  printf "%s\n" "file $file_name for $full_name user credentials does not exist"
+  printf "%s\n" "file $file_name for user credentials for service $full_name does not exist"
   printf "%s\n" "(missing file $file_path)"
   exit
 else
