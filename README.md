@@ -4,44 +4,46 @@ A Bash script to create remote repositories from the command line.
 ## Background
 If you use Git a lot, and only from the command line, having to switch to a browser and go online to create new repositories on code sharing and collaboration websites like GitHub, GitLab and Bitbucket can be inconvenient.
 
-I've been using `curl` to create new remote repositories from the terminal for quite a while now. To have a more portable solution – and to not have my access tokens show up in my console history anymore – I wrote this script.
+By accessing the APIs for these services with personal access tokens, you can, however, easily create new remote repositories directly from your terminal.
 
 ## Usage example
-To create a new, private repository called `neato_proj` on GitHub, you would use the following command:
+To create a new, private repository called `neato_proj` on GitHub using this script, you would use the following command:
 
 ```
 $ ./clirepo.sh neato_proj github
 ```
 
-The service's response will be printed to stdout, followed by handy URLs to your repository for easy adding of a new remote or viewing it online:
+On success, or even when your repository already exists, handy URLs pointing to it will get printed out to the console:
 
 ```
-You can now git remote add ...
-git@github.com:YOUR_USERNAME/neato_proj.git
-https://github.com/YOUR_USERNAME/neato_proj.git
+About to create repository 'neato_proj', standing by...
 
-Web URL: https://github.com/YOUR_USERNAME/neato_proj
+SUCCESS! Repository 'neato_proj' was created on GitHub.
+Visit it on the web: https://github.com/youraccount/neato_proj
+
+Add it as a remote:
+git remote add github https://github.com/youraccount/neato_proj.git
+git remote add github git@github.com:youraccount/neato_proj.git
 ```
 
 ## Requirements
-You need to have Bash installed on your machine for this script to work (it does not have to be your main shell; it isn't mine either).
+You need to have Bash installed on your machine for this script to work, though it does not have to be your main shell (it isn't mine either).
 
-You will also have to have created personal access tokens for the services you want to use. Check the official docs on [GitLab](https://docs.gitlab.com/ce/user/profile/personal_access_tokens.html), [GitHub](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) and [Bitbucket](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html#Personalaccesstokens-Generatingpersonalaccesstokens) to find out how to do this.
+You will also have to have created personal access tokens for the services you want to use, which you can do in the user settings. GitHub and GitLab call them exactly that, Personal Access Tokens, whereas Bitbucket refers to them as App Passwords.
 
-## Installation
-By default, the script looks for files with user credentials in a directory called `.clirepo` in your home directory. You can change the name and location of this directory by modifying the `credentials_dir` variable at the start of the script.
+## Setup
+The `.clirepo.sh` script is dependent on the presence of a file called `.conf`, which can be used to provide user-specific settings. You can base it off of `.conf.template`, which is included with this project.
 
-The easiest way to set everything up is to clone this repo into the default dir:
+When run, the script looks for your user credentials in a directory called `credentials`. By default, this directory is expected to be located within the `.clirepo` directory, for which the script looks in your user's home directory (i.e. at `/home/YOUR_USER/.clirepo/credentials`).
+
+You can change the name and location of the credentials directory by modifying the `credentials_dir` variable in the aforementioned `.conf` file. The easiest way to set everything up is to clone this repository to where it is expected to be out of the box:
 
 ```
 $ git clone URL_TO_THIS_REPO.git ~/.clirepo
 ```
+Next, you need to create files to hold your user credentials for all the services you want to use. Currently, the script supports remote repositories on Bitbucket, GitHub and GitLab. The credentials files are named like the services, with a leading dot and lowercased, so e.g. `.gitlab` for the file for GitLab.
 
-Next, you need to create a file for user credentials for each service you want to use. Currently, the script supports remote repositories on Bitbucket, GitHub and GitLab. The files with credentials are named like the services, but using lower case characters and a leading dot, so e.g. `.gitlab` for the file for GitLab.
-
-Templates for these three files are included in the `file_templates` directory in this repository. If you cloned the repo, you only need to copy the templates one level up into the main `.clirepo` directory, rename them from `.servicename.template` to `.servicename`, and fill in your own credentials.
-
-You can also call the script with `-t` (and, optionally, a service name) to see the required formatting of the credentials:
+Templates for the credentials files are included in the `credentials` directory. However, you can also call the script with the argument `-t` (and, optionally, a service name) to see how they need to be formatted:
 
 ```
 $ .clirepo.sh -t bitbucket
@@ -53,46 +55,43 @@ Finally, you should set the permissions for these files so only your user can ac
 $ chmod 600 .servicename
 ```
 
+**IMPORTANT NOTE**  
+Please note that this script currently does not support the handling of encrypted credentials, nor are the credentials files safeguarded in any way other than via file permissions for whose setting you yourself are responsible.
+
+### Default config
+
+To save time typing, you can use the alternative aliases `gh` for `github`, `gl` for `gitlab` and `bb` for `bitbucket` to refer to the services. If you provide your own aliases, these defaults are overwritten.
+
+
 ## More usage examples
 
-If you cloned the repository as described above and did not move the actual script, it will sit inside `.clirepo` in your home directory. To call it from there to create a private `myJSFramework` repository on bitbucket.org, you could use:
+If you cloned the repository as described above, it will sit inside `.clirepo` in your home directory. To call it to create a private `myJSFramework` repository on `bitbucket.org`, you would use:
 
 ```
 $ ~/.clirepo/clirepo.sh myJSFramework bitbucket
 ```
 
-though you could also shorten the service's names to two letters (use `gh` for github, `gl` for gitlab, `bb` for bitbucket):
+You could also use the default alias `bb` to do the same thing:
 
 ```
 $ ~/.clirepo/clirepo.sh myJSFramework bb
 ```
 
-All repositories created with this script are **set to private by default**. You can, however, use `public` as third argument to make them public from the start:
+Note that all repositories created with this script are **set to private by default**. You can, however, use `public` as third argument to make them public on creation:
 
 ```
 $ ~/.clirepo/clirepo.sh myJSFramework bb public
 ```
 
-You can also always use `-h` or `--help` for more information on how to use the script:
+`-h` or `--help` prints out usage hints to the console:
 ```
 $ ./clirepo.sh -h
 ```
 
----
-
-As shown earlier, the script prints out several useful URLs in addition to the service's JSON response on successful repository creation:
-* the repo's **SSH URL** (starts with  `git@`) and **HTTPS URL** (starts with `https://`), so you can quickly add the new remote to your local git repository, irrespective of which protocol you use to clone/fetch/pull/push
-* followed by its **web URL**, which might be clickable depending on the terminal software you use (press CTRL/CMD while clicking on the URL to check)
-
-The script will also tell you if the repository could not be created, e.g. because it already exists.
-
 ## Contributing
-If you have ideas for how this script could be improved, gimme a shout. Depending on the motivation for and dimensions of any proposed changes, I might consider merging them into my script – or ask you to just fork it and adapt it to your own needs.
+If you have ideas for how this script could be improved, let me know via the issue tracker.
 
 ## Licence
 This project is released under The MIT License.
-
-- - -
-<span xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/">This README was created using <span rel="dct:type" href="http://purl.org/dc/dcmitype/Text"><a property="dct:title" rel="cc:attributionURL" href="https://github.com/keikoro/README.template">README.template</a> by <span property="cc:attributionName">K Kollmann</span>, which is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.</span>
 
 
