@@ -1,0 +1,12 @@
+# clirepo expects the credentials directory to be located at ~/.clirepo/credentials.
+# If you want to change its location, use the credentials_dir variable to provide
+# its full new path.
+# credentials_dir=
+credentials_dir=
+
+# By default, the aliases/shortcuts bb (for bitbucket), gh (for github) and gl (for gitlab)
+# can be used to refer to the three services. You can, however, provide your own aliases,
+# which will override the defaults.
+# alias_bitbucket=bb
+# alias_github=gh
+# alias_gitlab=gl
