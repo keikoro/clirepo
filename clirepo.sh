@@ -14,7 +14,8 @@
 
 
 # ----- VARIABLES -----
-config_file=".conf"
+script_dir="$(dirname "$0")"
+config_file="$script_dir/.conf"
 
 # global defaults for repository and API handling/creation
 repo_exists=false
@@ -259,7 +260,7 @@ function check_config_file() {
 function retrieve_config() {
 # get values from config file
   local line
-  readarray -t lines < ".conf"
+  readarray -t lines < "$config_file"
   for line in "${lines[@]}"; do
     case "$line" in
       # ignore commented lines, empty values, empty lines
