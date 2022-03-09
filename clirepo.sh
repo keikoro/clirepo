@@ -230,7 +230,7 @@ main() {
 }
 
 
-# ----- FUCNTIONS -----
+# ----- FUNCTIONS -----
 function get_urls() {
   local response=$1
   if [[ "$response" =~ ${regex_ssh_clone_urls[$id]} ]]; then
